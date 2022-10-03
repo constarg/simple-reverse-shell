@@ -9,6 +9,34 @@
 #include <unistd.h>
 
 
+static char *read_recv_data(int sock_fd)
+{
+    size_t s_init = 10;
+    char c_char;
+    char *data = (char *) malloc(sizeof(char) *
+                                 s_init);
+    if (data == NULL) return NULL;
+    memset(data, 0x0, s_init);
+
+    int c_pos = 0;
+    while (c_char) {
+        if (read(sock_fd, 
+                 &c_char, 1) == -1) return -1;
+
+        data[c_pos] = c_char;
+        if (s_init == c_pos) {
+            s_init += 10;
+            data = (char *) realloc(data, 
+                                    sizeof(char) * s_init);
+            if (data == NULL) return NULL;
+        }
+        ++c_pos;
+    }
+    data[c_pos] = '\0';
+
+    return (char *) realloc(data, sizeof(char) * c_pos);
+}
+
 static int run_server(const u_short port)
 {
     struct sockaddr_in se_addr;
@@ -50,30 +78,27 @@ static int run_server(const u_short port)
 char *get_user_input(FILE *stream, 
                      size_t init_size)
 {
-	char *input = NULL;
-	int curr_ch;
-	size_t curr_len = 0;
+    char *input = NULL;
+    int curr_ch;
+    size_t curr_len = 0;
 
-	// Allocate space for init_size characters.
-	input = (char *) malloc(init_size, sizeof(char));
-	if (input == NULL)
-		return NULL;
+    // Allocate space for init_size characters.
+    input = (char *) malloc(init_size, sizeof(char));
+    if (input == NULL) return NULL;
 
-	while ( (curr_ch = fgetc(stream)) != EOF 
-			&& curr_ch != '\n')
-	{
-		input[curr_len++] = curr_ch;
-		if (curr_len == init_size)
-		{
-			input = (char *) realloc(input, sizeof(char) * 
-                                     (init_size += 10));
+    while ((curr_ch = fgetc(stream)) != EOF 
+			&& curr_ch != '\n') {
+        input[curr_len++] = curr_ch;
+        if (curr_len == init_size) {
+            input = (char *) realloc(input, sizeof(char) * 
+                                    (init_size += 10));
             if (input == NULL) return NULL;
-		}
-	}
-	input[curr_len++] = '\0';
+        }
+    }
+    input[curr_len++] = '\0';
 
-	// Decreace the memory to the exac size of string.
-	return realloc(input, sizeof(char) * curr_len);
+    // Decreace the memory to the exac size of string.
+    return (char *) realloc(input, sizeof(char) * curr_len);
 }
 
 static int run_client(const u_short port, 
@@ -127,10 +152,12 @@ int main(int argc, char *argv[])
 
         if (!(argv[2] == NULL)) {
             port = atoi(argv[2]);
-            if (port == 0) return -1;
+            if (port == 0 || port < 6000) {
+                printf("The port must be an number greater than 6000\n");
+                return -1;
+            }
         } else {
             printf("Please specify a port.\n");
-            return -1;
         }
         // get the socket.
         if (run_server(port) == -1) {
@@ -144,18 +171,21 @@ int main(int argc, char *argv[])
 
         if (!(argv[2] == NULL)) {
             ip = argv[2];
+
+            if (!(argv[3] == NULL)) {
+                port = atoi(argv[3]);
+                if (port == 0 || port < 6000) {
+                    printf("The port must be an number greater than 6000\n");
+                    return -1;
+                }
+            } else {
+                printf("Please specify a port.\n");
+            }
         } else {
             printf("Please specify an ip address.\n");
             return -1;
         }
 
-        if (!(argv[3] == NULL)) {
-            port = atoi(argv[3]);
-            if (port == 0) return -1;
-        } else {
-            printf("Please specify a port\n");
-            return -1;
-        }
         // get the socket.
         if (run_client(port, ip) == -1) {
             printf("Failed to start client.\n");
