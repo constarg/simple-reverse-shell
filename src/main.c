@@ -9,32 +9,20 @@
 #include <unistd.h>
 
 
-static char *read_recv_data(int sock_fd)
+#define MSG_CHUNK       0x200       // Buffer size.
+#define MSG_DONE_SEND   '\0'       
+
+static int sendall(int sock_fd, const char *msg)
 {
-    size_t s_init = 10;
-    char c_char;
-    char *data = (char *) malloc(sizeof(char) *
-                                 s_init);
-    if (data == NULL) return NULL;
-    memset(data, 0x0, s_init);
+    size_t s_msg = sizeof(msg);
+    // TODO - send the message by broke it into sagments.
+}
 
-    int c_pos = 0;
-    while (c_char) {
-        if (read(sock_fd, 
-                 &c_char, 1) == -1) return -1;
-
-        data[c_pos] = c_char;
-        if (s_init == c_pos) {
-            s_init += 10;
-            data = (char *) realloc(data, 
-                                    sizeof(char) * s_init);
-            if (data == NULL) return NULL;
-        }
-        ++c_pos;
-    }
-    data[c_pos] = '\0';
-
-    return (char *) realloc(data, sizeof(char) * c_pos);
+static int recvall(char *dst, int sock_fd)
+{
+    char buffer[MSG_CHUNK];
+    memset(&buffer, 0x0, MSG_CHUNK);
+    // TODO - recieve all the seqments and built the message.
 }
 
 static int run_server(const u_short port)
@@ -83,7 +71,7 @@ char *get_user_input(FILE *stream,
     size_t curr_len = 0;
 
     // Allocate space for init_size characters.
-    input = (char *) malloc(init_size, sizeof(char));
+    input = (char *) malloc(sizeof(char) * init_size);
     if (input == NULL) return NULL;
 
     while ((curr_ch = fgetc(stream)) != EOF 
@@ -124,6 +112,7 @@ static int run_client(const u_short port,
                         sizeof(se_sock_addr)) == -1) return -1;
 
     char *input = NULL;
+
     // simulate a shell like prompt.
     while (1) {
         printf("-> ");
@@ -132,7 +121,9 @@ static int run_client(const u_short port,
         printf("\n");
 
         // Send a request to the server to execute the command.
-        // TODO - send the requested command to the server.
+        // TODO - send the data.
+        // recieve the output.
+
         // TODO - recieve from the server the results of the command.
         free(input);
     }
