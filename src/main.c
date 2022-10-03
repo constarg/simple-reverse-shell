@@ -9,20 +9,40 @@
 #include <unistd.h>
 
 
-#define MSG_CHUNK       0x200       // Buffer size.
-#define MSG_DONE_SEND   '\0'       
+#define MSG_CHUNK 0x200       // Buffer size.
+
 
 static int sendall(int sock_fd, const char *msg)
 {
-    size_t s_msg = sizeof(msg);
-    // TODO - send the message by broke it into sagments.
+    // TODO - send the messaue by broke it into sagments.   
+    size_t msg_size = sizeof(msg);
+    size_t bytes_left = msg_size; // bytes left.
+    size_t chunk_size = 0;
+
+    int pos = 0;
+    // First send how many bytes does the reciever expect.
+    if (send(sock_fd, &msg_size, 
+        sizeof(msg_size), 0) == -1) return -1;
+    // Send the data.
+    while (bytes_left) {
+        chunk_size = (MSG_CHUNK > msg_size)? MSG_CHUNK : msg_size;
+        chunk_size = send(sock_fd, msg + pos, chunk_size, 0);
+        if (chunk_size == -1) return -1;
+        // caculate the left bytes and the current position.
+        bytes_left -= chunk_size;
+        pos += chunk_size;
+    }
+
+    return 0;
 }
 
 static int recvall(char *dst, int sock_fd)
 {
-    char buffer[MSG_CHUNK];
-    memset(&buffer, 0x0, MSG_CHUNK);
+    char *buffer;
     // TODO - recieve all the seqments and built the message.
+
+    // First recieve the length.
+    // TODO - recieve the length.
 }
 
 static int run_server(const u_short port)
