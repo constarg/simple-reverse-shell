@@ -5,12 +5,16 @@
 #include <memory.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 
-static int conf_server_sock(const u_short port)
+static int run_server(const u_short port)
 {
     struct sockaddr_in se_addr;
-    int se_fd;
+    int se_addr_l = sizeof(se_addr);
+    int se_fd; // the server socket.
+    int cl_fd; // the client socket.
 
     // initialize memory for se_addr.
     memset(&se_addr, 0x0, sizeof(se_addr));
@@ -26,18 +30,94 @@ static int conf_server_sock(const u_short port)
     if (bind(se_fd, (struct sockaddr *)&se_addr,
              sizeof(se_addr)) == -1) return -1;
 
-    return se_fd;
+    // listen for connection.
+    while (1) {
+        if (listen(se_fd, 3) == -1) continue;
+
+        cl_fd = accept(se_fd, (struct sockaddr *) &se_addr,
+                       &se_addr_l);
+        if (cl_fd == -1) continue;
+    }
+
+    close(cl_fd);
+    shutdown(se_fd, SHUT_RDWR);
+    return 0;
 }
 
-static void conf_client_sock(const u_short port, 
-                             const char *se_addr)
+static int run_client(const u_short port, 
+                      const char *se_addr)
 {
-    struct sockaddr_in se_addr;
+    struct sockaddr_in se_sock_addr;
+    int cl_fd; // the client socket.
+    int se_fd; // the server socket.
 
+    // initialize memory for se_addr.
+    memset(&se_sock_addr, 0x0, sizeof(se_sock_addr));
+    cl_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (cl_fd == -1) return -1;
+
+    se_sock_addr.sin_family = AF_INET;
+    se_sock_addr.sin_port   = htons(port);
+
+    if (inet_pton(AF_INET, se_addr, 
+                  &se_sock_addr.sin_addr) == -1) return -1;
+
+    // connect to the server.
+    if (connect(cl_fd, (struct sockaddr *)& se_sock_addr,
+                        sizeof(se_sock_addr)) == -1) return -1;
+
+    close(cl_fd);
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
+    u_short port; 
 
+    if (argv[1] == NULL) {
+        printf("No option.\n");
+    } else if (!strcmp(argv[1], "server")) {
+        int se_fd;
 
+        if (!(argv[2] == NULL)) {
+            port = atoi(argv[2]);
+            if (port == 0) return -1;
+        } else {
+            printf("Please specify a port.\n");
+            return -1;
+        }
+        // get the socket.
+        if (run_server(port) == -1) {
+            printf("Failed to start server.\n");
+            return -1;
+        }
+
+    } else if (!strcmp(argv[1], "client")) {
+        int cl_fd;
+        char *ip;
+
+        if (!(argv[2] == NULL)) {
+            ip = argv[2];
+        } else {
+            printf("Please specify an ip address.\n");
+            return -1;
+        }
+
+        if (!(argv[3] == NULL)) {
+            port = atoi(argv[3]);
+            if (port == 0) return -1;
+        } else {
+            printf("Please specify a port\n");
+            return -1;
+        }
+        // get the socket.
+        if (run_client(port, ip) == -1) {
+            printf("Failed to start client.\n");
+            return -1;
+        }
+    } else {
+        printf("Unrecognized option.\n");
+    }
+
+    return -1;
 }
