@@ -37,11 +37,43 @@ static int run_server(const u_short port)
         cl_fd = accept(se_fd, (struct sockaddr *) &se_addr,
                        &se_addr_l);
         if (cl_fd == -1) continue;
+
+        // TODO - recieve the requested command.
+        // TODO - send the results.
     }
 
     close(cl_fd);
     shutdown(se_fd, SHUT_RDWR);
     return 0;
+}
+
+char *get_user_input(FILE *stream, 
+                     size_t init_size)
+{
+	char *input = NULL;
+	int curr_ch;
+	size_t curr_len = 0;
+
+	// Allocate space for init_size characters.
+	input = (char *) malloc(init_size, sizeof(char));
+	if (input == NULL)
+		return NULL;
+
+	while ( (curr_ch = fgetc(stream)) != EOF 
+			&& curr_ch != '\n')
+	{
+		input[curr_len++] = curr_ch;
+		if (curr_len == init_size)
+		{
+			input = (char *) realloc(input, sizeof(char) * 
+                                     (init_size += 10));
+            if (input == NULL) return NULL;
+		}
+	}
+	input[curr_len++] = '\0';
+
+	// Decreace the memory to the exac size of string.
+	return realloc(input, sizeof(char) * curr_len);
 }
 
 static int run_client(const u_short port, 
@@ -65,6 +97,20 @@ static int run_client(const u_short port,
     // connect to the server.
     if (connect(cl_fd, (struct sockaddr *)& se_sock_addr,
                         sizeof(se_sock_addr)) == -1) return -1;
+
+    char *input = NULL;
+    // simulate a shell like prompt.
+    while (1) {
+        printf("-> ");
+        input = get_user_input(stdin, 10);
+        if (input == NULL) return -1;
+        printf("\n");
+
+        // Send a request to the server to execute the command.
+        // TODO - send the requested command to the server.
+        // TODO - recieve from the server the results of the command.
+        free(input);
+    }
 
     close(cl_fd);
     return 0;
