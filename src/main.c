@@ -25,11 +25,11 @@ static int sendall(int sock_fd, const char *msg)
     int pos = 0;
     // First send how many bytes does the reciever expect.
     if (send(sock_fd, &msg_size, 
-        sizeof(msg_size), 0) == -1) return -1;
+        sizeof(msg_size), MSG_NOSIGNAL) == -1) return -1;
     // Send the data.
     while (bytes_left) {
          chunk_size = (MSG_CHUNK < bytes_left)? MSG_CHUNK : bytes_left;
-         chunk_size = send(sock_fd, msg + pos, chunk_size, 0);
+         chunk_size = send(sock_fd, msg + pos, chunk_size, MSG_NOSIGNAL);
          if (chunk_size == -1) return -1;
          // caculate the left bytes and the current position.
          bytes_left -= chunk_size;
@@ -149,26 +149,27 @@ static int run_server(const u_short port)
         if (listen(se_fd, 3) == -1) continue;
 
         cl_fd = accept(se_fd, (struct sockaddr *) &se_addr,
-                       &se_addr_l);
+                       (socklen_t *) &se_addr_l);
         if (cl_fd == -1) continue;
 
         // check if the client is dead.
-        while (is_conn_alive != -1) {
+        while (is_conn_alive != -1 
+               && errno != EPIPE) {
             // if for some reason we can't recieve packets, close connection.
-            if (recvall(&cmd, cl_fd) == -1) break; // TODO - instead of break close connection.
+            if (recvall(&cmd, cl_fd) == -1) break;
             cmd_out = execute_command(cmd);            
-            if (cmd_out == NULL) break; // TODO - send that the command failed to execute.
+            if (cmd_out == NULL) break;             
             // send the output.
-            if (sendall(cl_fd, cmd_out) == -1) break; // TODO - break?
+            is_conn_alive = sendall(cl_fd, cmd_out);
 
             free(cmd);
             free(cmd_out);
-            // TODO - do not check if the connection if alive only by checking if send is returned -1.
-            //is_conn_alive = send(cl_fd, &is_conn_alive,
-            //                     sizeof(is_conn_alive), 0);
         }
 
         close(cl_fd);
+        // reset this values to await for the new connection.
+        errno = 0;
+        is_conn_alive = 0;
     }
 
     shutdown(se_fd, SHUT_RDWR);
@@ -180,7 +181,6 @@ static int run_client(const u_short port,
 {
     struct sockaddr_in se_sock_addr;
     int cl_fd; // the client socket.
-    int se_fd; // the server socket.
 
     // initialize memory for se_addr.
     memset(&se_sock_addr, 0x0, sizeof(se_sock_addr));
@@ -196,7 +196,7 @@ static int run_client(const u_short port,
     // connect to the server.
     if (connect(cl_fd, (struct sockaddr *)& se_sock_addr,
                         sizeof(se_sock_addr)) == -1) {
-        printf("Connection failed.");
+        printf("Connection failed.\n");
         return -1;
     }
 
@@ -215,6 +215,10 @@ static int run_client(const u_short port,
             printf("Failed to send the requested command,"
                    "check your connection or restart client and try again\n");
         }
+        if (errno == EPIPE || !strcmp(input, "client-close")) {
+            free(input);
+            break;
+        }
         // recieve the output.
         if (recvall(&cmd_out, cl_fd) == -1) {
              printf("Failed to recieve the output of the requested command,"
@@ -226,7 +230,7 @@ static int run_client(const u_short port,
         free(cmd_out);
     }
 
-    printf("Connection closed.");
+    printf("Connection closed.\n");
     close(cl_fd);
     return 0;
 }
@@ -238,8 +242,6 @@ int main(int argc, char *argv[])
     if (argv[1] == NULL) {
         printf("No option.\n");
     } else if (!strcmp(argv[1], "server")) {
-        int se_fd;
-
         if (!(argv[2] == NULL)) {
             port = atoi(argv[2]);
             if (port == 0 || port < 6000) {
@@ -256,7 +258,6 @@ int main(int argc, char *argv[])
         }
 
     } else if (!strcmp(argv[1], "client")) {
-        int cl_fd;
         char *ip;
 
         if (!(argv[2] == NULL)) {
