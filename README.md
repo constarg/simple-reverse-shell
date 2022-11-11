@@ -9,11 +9,11 @@ sudo apt-get install build-essential git gcc
 
 # Download & Build
 
-First download the program from GitHub and go to the terminal-tool-builder-lib folder.
+First download the program from GitHub and go to the simple-reverse-shell folder.
 
 ```
-% git clone https://github.com/rounnus/terminal-tool-builder-lib.git
-% cd terminal-tool-builder-lib/
+% git clone https://github.com/EmbeddedCat/simple-reverse-shell.git
+% cd simple-reverse-shell/
 ```
 
 After installation the program must be built. In order to build the program, the following instruction must be
