@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
+#include <errno.h>
 
 #define MSG_CHUNK 0x200       // Buffer size.
 
@@ -15,7 +15,7 @@
 static int sendall(int sock_fd, const char *msg)
 {
     // TODO - send the messaue by broke it into sagments.   
-    size_t msg_size = sizeof(msg);
+    size_t msg_size = strlen(msg);
     size_t bytes_left = msg_size; // bytes left.
     size_t chunk_size = 0;
 
@@ -25,24 +25,42 @@ static int sendall(int sock_fd, const char *msg)
         sizeof(msg_size), 0) == -1) return -1;
     // Send the data.
     while (bytes_left) {
-        chunk_size = (MSG_CHUNK > msg_size)? MSG_CHUNK : msg_size;
-        chunk_size = send(sock_fd, msg + pos, chunk_size, 0);
-        if (chunk_size == -1) return -1;
-        // caculate the left bytes and the current position.
-        bytes_left -= chunk_size;
-        pos += chunk_size;
+         chunk_size = (MSG_CHUNK < bytes_left)? MSG_CHUNK : bytes_left;
+         chunk_size = send(sock_fd, msg + pos, chunk_size, 0);
+         if (chunk_size == -1) return -1;
+         // caculate the left bytes and the current position.
+         bytes_left -= chunk_size;
+         pos += chunk_size;
     }
 
     return 0;
 }
 
-static int recvall(char *dst, int sock_fd)
+static int recvall(char **dst, int sock_fd)
 {
-    char *buffer;
-    // TODO - recieve all the seqments and built the message.
+    size_t s_expect = 0; // expected size.
+    size_t s_recieved = 0; // the size that we have recieved.
+    size_t chunk_size = MSG_CHUNK; // how many bytes to read each call.
 
-    // First recieve the length.
-    // TODO - recieve the length.
+    // Get the length of the command.
+    if (recv(sock_fd, &s_expect, sizeof(s_expect),
+             0) == -1) return -1;
+
+    // Initialize buffer.
+    *dst = (char *) malloc(sizeof(char) * 
+                           (s_expect + 1));
+    if (*dst == NULL) return -1;
+
+    while (s_expect) {
+        chunk_size = (MSG_CHUNK < s_expect)? MSG_CHUNK : s_expect;
+        chunk_size = recv(sock_fd, *dst + s_recieved, chunk_size, 0);
+        if (chunk_size == -1) return -1;
+        s_expect -= chunk_size;
+        s_recieved += chunk_size;
+    }
+    (*dst)[s_recieved] = '\0'; // terminate the string. 
+
+    return 0;
 }
 
 static int run_server(const u_short port)
@@ -67,6 +85,8 @@ static int run_server(const u_short port)
              sizeof(se_addr)) == -1) return -1;
 
     // listen for connection.
+    char *command = NULL;
+    int is_conn_alive = EPIPE;
     while (1) {
         if (listen(se_fd, 3) == -1) continue;
 
@@ -74,6 +94,20 @@ static int run_server(const u_short port)
                        &se_addr_l);
         if (cl_fd == -1) continue;
 
+        // check if the client is dead.
+        while (is_conn_alive != -1) {
+            // if for some reason we can't recieve packets, close connection.
+            if (recvall(&command, cl_fd) == -1) break; // TODO - instead of break close connection.
+
+            is_conn_alive = send(cl_fd, &is_conn_alive,
+                                 sizeof(is_conn_alive), 0);
+        }
+
+        if (recvall(&command, cl_fd) == -1) 
+        {
+            printf("Error\n");
+            return -1;
+        }
         // TODO - recieve the requested command.
         // TODO - send the results.
     }
@@ -140,6 +174,10 @@ static int run_client(const u_short port,
         if (input == NULL) return -1;
         printf("\n");
 
+        if (sendall(cl_fd, input) == 0)
+        {
+            printf("Command sended\n");
+        }
         // Send a request to the server to execute the command.
         // TODO - send the data.
         // recieve the output.
