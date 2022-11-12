@@ -45,7 +45,7 @@ static int recvall(char **dst, int sock_fd)
     size_t s_init_msg = 10;
     (*dst) = (char *) malloc(sizeof(char) * s_init_msg);
     if (*dst == NULL) return -1;
-    char ch;
+    char ch = ' ';
 
     int len = 0;
     while (ch != '\0') {
