@@ -36,7 +36,7 @@ In the above usage example, the server plays the role of the system to be attack
 
 With a diagram as shown below, I believe it will be fully understood.
 
-![image](https://user-images.githubusercontent.com/38585824/201480747-139b23ec-18d5-4363-9573-62bae1703172.png)
+![image](https://user-images.githubusercontent.com/38585824/201480795-199ce0aa-72f3-4ed5-bf8e-29b70b2c0119.png)
 
 
 
