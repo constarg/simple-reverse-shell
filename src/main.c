@@ -23,9 +23,7 @@ static int sendall(int sock_fd, const char *msg)
     size_t chunk_size = 0;
 
     int pos = 0;
-    // First send how many bytes does the reciever expect.
-    if (send(sock_fd, &msg_size, 
-        sizeof(msg_size), MSG_NOSIGNAL) == -1) return -1;
+    
     // Send the data.
     while (bytes_left) {
          chunk_size = (MSG_CHUNK < bytes_left)? MSG_CHUNK : bytes_left;
@@ -35,34 +33,36 @@ static int sendall(int sock_fd, const char *msg)
          bytes_left -= chunk_size;
          pos += chunk_size;
     }
+    char buff = '\0';
+    if (send(sock_fd, &buff, 1, MSG_NOSIGNAL) == -1) return -1;
 
     return 0;
 }
 
 static int recvall(char **dst, int sock_fd)
 {
-    size_t s_expect = 0; // expected size.
-    size_t s_recieved = 0; // the size that we have recieved.
-    size_t chunk_size = MSG_CHUNK; // how many bytes to read each call.
 
-    // Get the length of the command.
-    if (recv(sock_fd, &s_expect, sizeof(s_expect),
-             0) == -1) return -1;
-
-    // Initialize buffer.
-    *dst = (char *) malloc(sizeof(char) * 
-                           (s_expect + 1));
+    size_t s_init_msg = 10;
+    (*dst) = (char *) malloc(sizeof(char) * s_init_msg);
     if (*dst == NULL) return -1;
+    char ch;
 
-    while (s_expect) {
-        chunk_size = (MSG_CHUNK < s_expect)? MSG_CHUNK : s_expect;
-        chunk_size = recv(sock_fd, *dst + s_recieved, chunk_size, 0);
-        if (chunk_size == -1) return -1;
-        s_expect -= chunk_size;
-        s_recieved += chunk_size;
+    int len = 0;
+    while (ch != '\0') {
+        if (recv(sock_fd, &ch, 1, 0) == -1) return -1;
+        (*dst)[len] = ch;
+        
+        ++len;
+        if (len == s_init_msg) {
+            s_init_msg += 10;
+            (*dst) = (char *) realloc(*dst, sizeof(char) * s_init_msg);
+            if (*dst == NULL) return -1;
+        }
     }
-    (*dst)[s_recieved] = '\0'; // terminate the string. 
+    (*dst)[len] = '\0';
 
+    (*dst) = (char *) realloc(*dst, sizeof(char) * len);
+    if (*dst == NULL) return -1;
     return 0;
 }
 
