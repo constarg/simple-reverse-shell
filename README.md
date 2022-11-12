@@ -30,3 +30,4 @@ revershell [OPTION]...
   client [IP] [PORT], Try to connect on a server with ip address [ IP ] on port [ PORT ].
   server [PORT], Create a new connection and listen on port [ PORT ].
 ```
+In the above usage example, the server plays the role of the system to be attacked and the client plays the role of the attacker. So by running the server on a certain computer, it forces the system to open a port to listen for a client. The client (attacker) can then, if he has access to that computer over the network, run the program as a client and connect to the port that that computer is listening on.
