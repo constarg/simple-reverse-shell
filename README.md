@@ -2,6 +2,8 @@
 
 [![GitHub license](https://img.shields.io/badge/Licence-MIT-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell/blob/main/LICENSE)
 [![Release](https://img.shields.io/badge/Release-1.0-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell/releases/tag/v1.0)
+[![Purpose](https://img.shields.io/badge/Purpose-Educational-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell/releases/tag/v1.0)
+[![OS](https://img.shields.io/badge/OS-Linux-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell)
 
 # Disclaimer
 
