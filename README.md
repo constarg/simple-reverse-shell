@@ -1,3 +1,8 @@
+# Simple Reverse Shell
+
+[![GitHub license](https://img.shields.io/badge/Licence-MIT-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell)
+[![Release](https://img.shields.io/badge/Release-1.0-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell)
+
 # reverse-shell
 This program is for educational purposes only.
 
