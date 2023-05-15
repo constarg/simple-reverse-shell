@@ -1,9 +1,9 @@
 # Simple Reverse Shell
 
-[![GitHub license](https://img.shields.io/badge/Licence-MIT-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell/blob/main/LICENSE)
-[![Release](https://img.shields.io/badge/Release-1.0-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell/releases/tag/v1.0)
-[![Purpose](https://img.shields.io/badge/Purpose-Educational-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell/releases/tag/v1.0)
-[![OS](https://img.shields.io/badge/OS-Linux-brightgreen)](https://github.com/EmbeddedCat/simple-reverse-shell)
+[![GitHub license](https://img.shields.io/badge/Licence-MIT-brightgreen)](https://github.com/constarg/simple-reverse-shell/blob/main/LICENSE)
+[![Release](https://img.shields.io/badge/Release-1.0-brightgreen)](https://github.com/constarg/simple-reverse-shell/releases/tag/v1.0)
+[![Purpose](https://img.shields.io/badge/Purpose-Educational-brightgreen)](https://github.com/constarg/simple-reverse-shell/releases/tag/v1.0)
+[![OS](https://img.shields.io/badge/OS-Linux-brightgreen)](https://github.com/constarg/simple-reverse-shell)
 
 # What a reverse shell is?
 
@@ -31,7 +31,7 @@ sudo apt-get install build-essential git gcc
 First download the program from GitHub and go to the simple-reverse-shell folder.
 
 ```
-% git clone https://github.com/EmbeddedCat/simple-reverse-shell.git
+% git clone https://github.com/constarg/simple-reverse-shell.git
 % cd simple-reverse-shell/
 ```
 
